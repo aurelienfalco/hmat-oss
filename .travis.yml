@@ -2,34 +2,21 @@ language: cpp
 
 matrix:
   include:
-  - os: osx
-    compiler: clang
-    env: EXTRA_CMAKE_FLAGS="-DCMAKE_CXX_FLAGS=-std=c++11 -DCMAKE_MACOSX_RPATH=ON" CMAKE_BUILD_TYPE=Release BUILD_SHARED_LIBS=ON
   - os: linux
-    compiler: gcc
-    env: CMAKE_BUILD_TYPE=Release BUILD_SHARED_LIBS=ON
-  - os: linux
-    compiler: clang
-    env: CMAKE_BUILD_TYPE=Release BUILD_SHARED_LIBS=ON
-  - os: linux
-    compiler: gcc
-    env: CMAKE_BUILD_TYPE=Debug BUILD_SHARED_LIBS=ON
-  - os: linux
-    compiler: gcc
-    env: CMAKE_BUILD_TYPE=Release BUILD_SHARED_LIBS=OFF
-  - os: linux
-    compiler: gcc
-    env: CMAKE_BUILD_TYPE=Debug BUILD_SHARED_LIBS=OFF
+    compiler: i686-w64-mingw32-g++
+    env: EXTRA_CMAKE_FLAGS="-DBLAS_LIBRARIES=/usr/lib/libblas.so -DCMAKE_TOOLCHAIN_FILE=../CMake/toolchain-i686-w64-mingw32.cmake" CMAKE_BUILD_TYPE=Release BUILD_SHARED_LIBS=ON
 
 before_install:
  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew update; brew tap homebrew/science; else sudo apt-get update -qq; fi
  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew install openblas; else sudo apt-get install -qq libblas-dev; fi
+ - env
+ - sudo apt-get install gcc-mingw-w64-i686 g++-mingw-w64-i686 binutils-mingw-w64-i686 
 
 before_script:
   - mkdir build
   - cd build
 
 script:
-  - cmake -DBUILD_EXAMPLES=ON -DBUILD_SHARED_LIBS=$BUILD_SHARED_LIBS -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE $EXTRA_CMAKE_FLAGS ..
+  - cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE $EXTRA_CMAKE_FLAGS ..
   - make VERBOSE=1
   - make test
