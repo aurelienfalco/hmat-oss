@@ -4,7 +4,7 @@ matrix:
   include:
   - os: linux
     compiler: i686-w64-mingw32-g++
-    env: EXTRA_CMAKE_FLAGS="-DBLAS_LIBRARIES=/usr/lib/libblas.so -DLAPACK_LIBRARIES=/usr/lib/liblapack.so -DCMAKE_TOOLCHAIN_FILE=../CMake/toolchain-i686-w64-mingw32.cmake" CMAKE_BUILD_TYPE=Release BUILD_SHARED_LIBS=ON
+    env: EXTRA_CMAKE_FLAGS="-DCBLAS_LIBRARIES=/usr/lib/libblas.so -DBLAS_LIBRARIES=/usr/lib/libblas.so -DLAPACK_LIBRARIES=/usr/lib/liblapack.so -DCMAKE_TOOLCHAIN_FILE=../CMake/toolchain-i686-w64-mingw32.cmake" CMAKE_BUILD_TYPE=Release BUILD_SHARED_LIBS=ON
 
 before_install:
  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew update; brew tap homebrew/science; else sudo apt-get update -qq; fi
