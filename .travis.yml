@@ -15,6 +15,7 @@ before_install:
 before_script:
   - mkdir build
   - cd build
+  - ln -s /usr/include/cblas.h
 
 script:
   - cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE $EXTRA_CMAKE_FLAGS ..
