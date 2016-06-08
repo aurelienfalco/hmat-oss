@@ -423,7 +423,7 @@ RkMatrix<T>* RkMatrix<T>::formattedAddParts(T* alpha, const RkMatrix<T>** parts,
   }
   RkMatrix<T>* rk = new RkMatrix<T>(resultA, rows, resultB, cols, minMethod);
   if (notNullParts > 1) {
-    rk->truncate(approx.recompressionEpsilon);
+    // rk->truncate(approx.recompressionEpsilon);
   }
   return rk;
 }
