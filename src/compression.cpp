@@ -55,7 +55,9 @@ using std::isnan;
 using std::vector;
 using std::min;
 using std::max;
-
+extern "C" {
+    u_int64_t compressTime = 0;
+}
 namespace hmat {
 
 
@@ -274,11 +276,11 @@ static int findMinCol(const ClusterAssemblyFunction<T>& block,
   return j_ref;
 }
 
-
 template<typename T>
 RkMatrix<T>* compressMatrix(FullMatrix<T>* m, const IndexSet* rows,
                             const IndexSet* cols) {
   DECLARE_CONTEXT;
+  Time t1 = now();
   assert(m->rows == rows->size());
   assert(m->cols == cols->size());
   assert(m->lda >= m->rows);
@@ -326,6 +328,8 @@ RkMatrix<T>* compressMatrix(FullMatrix<T>* m, const IndexSet* rows,
   delete vt;
   delete sigma;
   FullMatrix<T>* a = uTilde;
+  Time t2 = now();
+  compressTime += time_diff_in_nanos(t1, t2);
   return new RkMatrix<T>(a, rows, vTilde, cols, Svd);
 }
 
