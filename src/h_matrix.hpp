@@ -602,7 +602,7 @@ public:
 
   bool isNull() const {
       assert(rank_ >= FULL_BLOCK);
-      return !this || rank_ == 0 || (rank_ == FULL_BLOCK && full_ == NULL);
+      return rank_ == 0 || (rank_ == FULL_BLOCK && full_ == NULL);
   }
 
   bool isAssembled() const {

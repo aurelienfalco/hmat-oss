@@ -248,7 +248,6 @@ void HMatrix<T>::setClusterTrees(const ClusterTree* rows, const ClusterTree* col
 
 template<typename T>
 void HMatrix<T>::assemble(Assembly<T>& f, const AllocationObserver & ao) {
-  if (!this) return;
   if (this->isLeaf()) {
     // If the leaf is admissible, matrix assembly and compression.
     // if not we keep the matrix.
@@ -269,7 +268,8 @@ void HMatrix<T>::assemble(Assembly<T>& f, const AllocationObserver & ao) {
     full_ = NULL;
     rk_ = NULL;
     for (int i = 0; i < this->nrChild(); i++) {
-      this->getChild(i)->assemble(f, ao);
+      if (this->getChild(i))
+        this->getChild(i)->assemble(f, ao);
     }
     assembledRecurse();
     if (coarsening)
@@ -552,7 +552,7 @@ void HMatrix<T>::gemv(char trans, T alpha, const Vector<T>* x, T beta, Vector<T>
 template<typename T>
 void HMatrix<T>::gemv(char matTrans, T alpha, const FullMatrix<T>* x, T beta, FullMatrix<T>* y) const {
   assert(x->cols == y->cols);
-  if (!this || rows()->size() == 0 || cols()->size() == 0) return;
+  if (rows()->size() == 0 || cols()->size() == 0) return;
   assert((matTrans == 'T' ? cols()->size() : rows()->size()) == y->rows);
   assert((matTrans == 'T' ? rows()->size() : cols()->size()) == x->rows);
   if (beta != Constants<T>::pone) {
@@ -1053,7 +1053,7 @@ HMatrix<T>::leafGemm(char transA, char transB, T alpha, const HMatrix<T>* a, con
         rank_ = rk()->rank();
         return;
     }
-    if ( (this->isLeaf() && !a->isLeaf() && !b->isLeaf()) || nrChildRow() > b->nrChildRow() || nrChildCol() > b->nrChildCol() || nrChildRow() > a->nrChildRow() || nrChildCol() > a->nrChildCol() ) {
+    if ( this->isLeaf() && !a->isLeaf() && !b->isLeaf() && (nrChildRow() > b->nrChildRow() || nrChildCol() > b->nrChildCol() || nrChildRow() > a->nrChildRow() || nrChildCol() > a->nrChildCol()) ) {
       char tA = transA, tB = transB;
         for (int i = 0; i < (tA=='N' ? a->nrChildRow() : a->nrChildCol()) ; i++) {
           for (int j = 0; j < (tB=='N' ? b->nrChildCol() : b->nrChildRow()) ; j++) {
@@ -1119,7 +1119,7 @@ HMatrix<T>::leafGemm(char transA, char transB, T alpha, const HMatrix<T>* a, con
 template<typename T>
 void HMatrix<T>::gemm(char transA, char transB, T alpha, const HMatrix<T>* a, const HMatrix<T>* b, T beta) {
   // Computing a(m,0) * b(0,n) here may give wrong results because of format conversions, exit early
-  if (!this || !a || !b || rows()->size() == 0 || cols()->size() == 0) return;
+  if (rows()->size() == 0 || cols()->size() == 0) return;
 
   if ((transA == 'T') && (transB == 'T')) {
     // This code has *not* been tested because it's currently not used.
@@ -1675,7 +1675,7 @@ void HMatrix<T>::inverse() {
 template<typename T>
 void HMatrix<T>::solveLowerTriangularLeft(HMatrix<T>* b, bool unitriangular) const {
   DECLARE_CONTEXT;
-  if (!this || !b || rows()->size() == 0 || cols()->size() == 0) return;
+  if (rows()->size() == 0 || cols()->size() == 0) return;
   // At first, the recursion one (simple case)
   if (!this->isLeaf() && !b->isLeaf()) {
     this->recursiveSolveLowerTriangularLeft(b, unitriangular);
@@ -1737,8 +1737,10 @@ void HMatrix<T>::solveLowerTriangularLeft(FullMatrix<T>* b, bool unitriangular) 
       sub[i] = new FullMatrix<T>(b->m+offset, get(i, i)->cols()->size(), b->cols, b->lda);
       offset += get(i, i)->cols()->size();
       // Update sub[i] with the contribution of the solutions already computed sub[j] j<i
+      if (!sub[i]) continue;
       for (int j=0 ; j<i ; j++)
-        get(i, j)->gemv('N', Constants<T>::mone, sub[j], Constants<T>::pone, sub[i]);
+        if (get(i,j) && sub[j])
+          get(i, j)->gemv('N', Constants<T>::mone, sub[j], Constants<T>::pone, sub[i]);
       // Solve the i-th diagonal system
       get(i, i)->solveLowerTriangularLeft(sub[i], unitriangular);
     }
@@ -1750,7 +1752,7 @@ void HMatrix<T>::solveLowerTriangularLeft(FullMatrix<T>* b, bool unitriangular) 
 template<typename T>
 void HMatrix<T>::solveUpperTriangularRight(HMatrix<T>* b, bool unitriangular, bool lowerStored) const {
   DECLARE_CONTEXT;
-  if (!this || !b || rows()->size() == 0 || cols()->size() == 0) return;
+  if (rows()->size() == 0 || cols()->size() == 0) return;
   // The recursion one (simple case)
   if (!this->isLeaf() && !b->isLeaf()) {
     this->recursiveSolveUpperTriangularRight(b, unitriangular, lowerStored);
@@ -1867,9 +1869,11 @@ void HMatrix<T>::solveUpperTriangularRight(FullMatrix<T>* b, bool unitriangular,
     }
     for (int i=0 ; i<nrChildRow() ; i++) {
       // Update sub[i] with the contribution of the solutions already computed sub[j]
+      if (!sub[i]) continue;
       for (int j=0 ; j<i ; j++) {
         const HMatrix<T>* u_ji = (lowerStored ? get(i, j) : get(j, i));
-        u_ji->gemv(lowerStored ? 'N' : 'T', Constants<T>::mone, sub[j], Constants<T>::pone, sub[i]);
+        if (u_ji && sub[j])
+          u_ji->gemv(lowerStored ? 'N' : 'T', Constants<T>::mone, sub[j], Constants<T>::pone, sub[i]);
       }
       // Solve the i-th diagonal system
       get(i, i)->solveUpperTriangularRight(sub[i], unitriangular, lowerStored);
@@ -1900,11 +1904,13 @@ void HMatrix<T>::solveUpperTriangularLeft(FullMatrix<T>* b, bool unitriangular, 
     }
     for (int i=nrChildRow()-1 ; i>=0 ; i--) {
       // Solve the i-th diagonal system
+      if (!sub[i]) continue;
       get(i, i)->solveUpperTriangularLeft(sub[i], unitriangular, lowerStored);
       // Update sub[j] j<i with the contribution of the solutions just computed sub[i]
       for (int j=0 ; j<i ; j++) {
         const HMatrix<T>* u_ji = (lowerStored ? get(i, j) : get(j, i));
-        u_ji->gemv(lowerStored ? 'T' : 'N', Constants<T>::mone, sub[i], Constants<T>::pone, sub[j]);
+        if (u_ji && sub[j])
+          u_ji->gemv(lowerStored ? 'T' : 'N', Constants<T>::mone, sub[i], Constants<T>::pone, sub[j]);
       }
     }
     for (int i=0 ; i<nrChildRow() ; i++)
