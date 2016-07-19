@@ -98,7 +98,6 @@ void restoreVectorOrder(FullMatrix<T>* v, int* indices) {
   }
 }
 
-
 template<typename T>
 HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSettings * settings,
                     SymmetryFlag symFlag, AdmissibilityCondition * admissibilityCondition)
@@ -120,10 +119,11 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
     for (int i = 0; i < nrChildRow(); ++i) {
       for (int j = 0; j < nrChildCol(); ++j) {
         if ((symFlag == kNotSymmetric) || (isUpper && (i <= j)) || (isLower && (i >= j))) {
-          this->insertChild(i, j, new HMatrix<T>(_rows->getChild(i), _cols->getChild(j), settings, (i == j ? symFlag : kNotSymmetric), admissibilityCondition));
-         }
-       }
-     }
+          if (!admissibilityCondition->isInert(*(_rows->getChild(i)),*(_cols->getChild(j))))
+            this->insertChild(i, j, new HMatrix<T>(_rows->getChild(i), _cols->getChild(j), settings, (i == j ? symFlag : kNotSymmetric), admissibilityCondition));
+        }
+      }
+    }
   }
   admissibilityCondition->clean(*(rows_));
   admissibilityCondition->clean(*(cols_));
@@ -248,6 +248,7 @@ void HMatrix<T>::setClusterTrees(const ClusterTree* rows, const ClusterTree* col
 
 template<typename T>
 void HMatrix<T>::assemble(Assembly<T>& f, const AllocationObserver & ao) {
+  if (!this) return;
   if (this->isLeaf()) {
     // If the leaf is admissible, matrix assembly and compression.
     // if not we keep the matrix.
@@ -380,10 +381,12 @@ template<typename T> void HMatrix<T>::info(hmat_info_t & result) {
             result.full_size += s;
         }
     } else {
-        for (int i = 0; i < this->nrChild(); i++) {
-            HMatrix<T> *child = this->getChild(i);
+        for (int i = 0; i < this->nrChildRow(); i++) {
+          for (int j = 0; j < this->nrChildCol(); j++) {
+            HMatrix<T> *child = this->get(i,j);
             if (child)
                 child->info(result);
+          }
         }
     }
 }
@@ -548,9 +551,9 @@ void HMatrix<T>::gemv(char trans, T alpha, const Vector<T>* x, T beta, Vector<T>
 template<typename T>
 void HMatrix<T>::gemv(char matTrans, T alpha, const FullMatrix<T>* x, T beta, FullMatrix<T>* y) const {
   assert(x->cols == y->cols);
+  if (!this || rows()->size() == 0 || cols()->size() == 0) return;
   assert((matTrans == 'T' ? cols()->size() : rows()->size()) == y->rows);
   assert((matTrans == 'T' ? rows()->size() : cols()->size()) == x->rows);
-  if (rows()->size() == 0 || cols()->size() == 0) return;
   if (beta != Constants<T>::pone) {
     y->scale(beta);
   }
@@ -573,13 +576,13 @@ void HMatrix<T>::gemv(char matTrans, T alpha, const FullMatrix<T>* x, T beta, Fu
             child = get(j, i);
           trans = (trans == 'N' ? 'T' : 'N');
         }
-        else
+        else if (isUpper)
         {
-          assert(isUpper);
             assert(i>j);
             child = get(j, i);
           trans = (trans == 'N' ? 'T' : 'N');
         }
+        else continue;
       }
       const ClusterData* childRows = child->rows();
       const ClusterData* childCols = child->cols();
@@ -781,13 +784,9 @@ void HMatrix<T>::axpy(T alpha, const FullMatrix<T>* b, const IndexSet* rows,
     int colOffset = this->cols()->offset() - cols->offset();
     FullMatrix<T> subMat(b->m + rowOffset + ((size_t) colOffset) * b->lda,
                          this->rows()->size(), this->cols()->size(), b->lda);
-    if (this->isNull()) {
-      full(FullMatrix<T>::Zero( this->rows()->size(), this->cols()->size()) );
-    }
     if (isFullMatrix()) {
       full()->axpy(alpha, &subMat);
-    } else {
-      assert(isRkMatrix());
+    } else if (isRkMatrix()) {
       rk()->axpy(alpha, &subMat);
       rank_ = rk()->rank();
     }
@@ -1084,7 +1083,7 @@ HMatrix<T>::leafGemm(char transA, char transB, T alpha, const HMatrix<T>* a, con
 template<typename T>
 void HMatrix<T>::gemm(char transA, char transB, T alpha, const HMatrix<T>* a, const HMatrix<T>* b, T beta) {
   // Computing a(m,0) * b(0,n) here may give wrong results because of format conversions, exit early
-  if (rows()->size() == 0 || cols()->size() == 0) return;
+  if (!this || !a || !b || rows()->size() == 0 || cols()->size() == 0) return;
 
   if ((transA == 'T') && (transB == 'T')) {
     // This code has *not* been tested because it's currently not used.
@@ -1640,7 +1639,7 @@ void HMatrix<T>::inverse() {
 template<typename T>
 void HMatrix<T>::solveLowerTriangularLeft(HMatrix<T>* b, bool unitriangular) const {
   DECLARE_CONTEXT;
-  if (rows()->size() == 0 || cols()->size() == 0) return;
+  if (!this || !b || rows()->size() == 0 || cols()->size() == 0) return;
   // At first, the recursion one (simple case)
   if (!this->isLeaf() && !b->isLeaf()) {
     this->recursiveSolveLowerTriangularLeft(b, unitriangular);
@@ -1715,7 +1714,7 @@ void HMatrix<T>::solveLowerTriangularLeft(FullMatrix<T>* b, bool unitriangular) 
 template<typename T>
 void HMatrix<T>::solveUpperTriangularRight(HMatrix<T>* b, bool unitriangular, bool lowerStored) const {
   DECLARE_CONTEXT;
-  if (rows()->size() == 0 || cols()->size() == 0) return;
+  if (!this || !b || rows()->size() == 0 || cols()->size() == 0) return;
   // The recursion one (simple case)
   if (!this->isLeaf() && !b->isLeaf()) {
     this->recursiveSolveUpperTriangularRight(b, unitriangular, lowerStored);
@@ -2314,4 +2313,3 @@ namespace hmat {
   template class RecursionMatrix<Z_t, HMatrix<Z_t> >;
 
 }  // end namespace hmat
-
