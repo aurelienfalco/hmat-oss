@@ -106,8 +106,11 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
     isTriUpper(false), isTriLower(false), admissible(false), temporary(false), ownClusterTree_(false),
     localSettings(settings)
 {
-  admissible = admissibilityCondition->isAdmissible(*(rows_), *(cols_));
-  if (_rows->isLeaf() || _cols->isLeaf() || admissible) {
+  bool rowsAdmissible, colsAdmissible;
+  nRows = _rows->nrChild() ;
+  nCols = _cols->nrChild() ;
+  admissible = admissibilityCondition->isAdmissible(*(rows_), *(cols_), &rowsAdmissible, &colsAdmissible);
+  if ((_rows->isLeaf() && _cols->isLeaf()) || admissible ) {
     if (admissible) {
       rk(new RkMatrix<T>(NULL, rows(), NULL, cols(), NoCompression));
     }
@@ -116,11 +119,15 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
     isLower = (symFlag == kLowerSymmetric ? true : false);
     isTriUpper = false;
     isTriLower = false;
+    if (rowsAdmissible) nRows = 1;
+    if (colsAdmissible) nCols = 1;
     for (int i = 0; i < nrChildRow(); ++i) {
+      ClusterTree* rowChild = (rowsAdmissible ? _rows : static_cast<ClusterTree*>(_rows->getChild(i)));
       for (int j = 0; j < nrChildCol(); ++j) {
+        ClusterTree* colChild = (colsAdmissible ? _cols : static_cast<ClusterTree*>(_cols->getChild(j)));
         if ((symFlag == kNotSymmetric) || (isUpper && (i <= j)) || (isLower && (i >= j))) {
-          if (!admissibilityCondition->isInert(*(_rows->getChild(i)),*(_cols->getChild(j))))
-            this->insertChild(i, j, new HMatrix<T>(_rows->getChild(i), _cols->getChild(j), settings, (i == j ? symFlag : kNotSymmetric), admissibilityCondition));
+          if (!admissibilityCondition->isInert(*rowChild, *colChild))
+            this->insertChild(i, j, new HMatrix<T>(rowChild, colChild, settings, (i == j ? symFlag : kNotSymmetric), admissibilityCondition));
         }
       }
     }
@@ -141,6 +148,8 @@ template<typename T> HMatrix<T> * HMatrix<T>::internalCopy(bool temporary, bool 
     HMatrix<T> * r = new HMatrix<T>(localSettings.global);
     r->rows_ = rows_;
     r->cols_ = cols_;
+    r->nRows = nRows;
+    r->nCols = nCols;
     r->temporary = temporary;
     if(withChildren) {
         for(int i = 0; i < nrChildRow(); i++) {
@@ -1053,7 +1062,7 @@ HMatrix<T>::leafGemm(char transA, char transB, T alpha, const HMatrix<T>* a, con
         rank_ = rk()->rank();
         return;
     }
-    if ( this->isLeaf() && !a->isLeaf() && !b->isLeaf() && (nrChildRow() > b->nrChildRow() || nrChildCol() > b->nrChildCol() || nrChildRow() > a->nrChildRow() || nrChildCol() > a->nrChildCol()) ) {
+    if ( this->isLeaf() && !a->isLeaf() && !b->isLeaf()) {
       char tA = transA, tB = transB;
         for (int i = 0; i < (tA=='N' ? a->nrChildRow() : a->nrChildCol()) ; i++) {
           for (int j = 0; j < (tB=='N' ? b->nrChildCol() : b->nrChildRow()) ; j++) {

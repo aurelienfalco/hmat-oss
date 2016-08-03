@@ -49,9 +49,21 @@ StandardAdmissibilityCondition::StandardAdmissibilityCondition(
     }
 }
 
+
 bool
-StandardAdmissibilityCondition::isAdmissible(const ClusterTree& rows, const ClusterTree& cols)
+StandardAdmissibilityCondition::isAdmissible(const ClusterTree& rows, const ClusterTree& cols, bool* rowsAdmissible, bool* colsAdmissible)
 {
+  if (rowsAdmissible && colsAdmissible) {
+    if (rows.data.size() / cols.data.size() > 1 && cols.isLeaf()) {
+      *colsAdmissible = true;
+      *rowsAdmissible = false;
+    } else if (cols.data.size() / rows.data.size() > 1 && rows.isLeaf()) {
+      *colsAdmissible = false;
+      *rowsAdmissible = true;
+    } else // approximately the same size and non leaf
+      *rowsAdmissible = *colsAdmissible = false;
+  }
+
     CompressionMethod m = HMatSettings::getInstance().compressionMethod;
     bool isFullAlgo = !(m == AcaPartial || m == AcaPlus);
     size_t elements = ((size_t) rows.data.size()) * cols.data.size();

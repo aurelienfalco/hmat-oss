@@ -131,6 +131,9 @@ template<typename T> class HMatrix : public Tree<HMatrix<T> >, public RecursionM
   const ClusterTree * rows_;
   /// Columns of this HMatrix block
   const ClusterTree * cols_;
+  /// number of rows and cols
+  int nRows;
+  int nCols;
   union {
    /// Compressed block, or NULL if the block is not a leaf or is full.
    RkMatrix<T> * rk_;
@@ -507,13 +510,13 @@ public:
   /*! \brief Return the number of children in the row dimension.
     */
   inline int nrChildRow() const {
-    return rows_->nrChild();
+    return nRows;
   }
 
   /*! \brief Return the number of children in the column dimension.
     */
   inline int nrChildCol() const {
-    return cols_->nrChild();
+    return nCols;
   }
   /*! \brief Destroy the HMatrix.
     */
