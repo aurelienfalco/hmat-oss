@@ -50,7 +50,7 @@ StandardAdmissibilityCondition::StandardAdmissibilityCondition(
 }
 
 bool
-StandardAdmissibilityCondition::isAdmissible(const ClusterTree& rows, const ClusterTree& cols)
+StandardAdmissibilityCondition::isAdmissible(const ClusterTree& rows, const ClusterTree& cols, bool* rowsAdmissible, bool* colsAdmissible)
 {
     CompressionMethod m = HMatSettings::getInstance().compressionMethod;
     bool isFullAlgo = !(m == AcaPartial || m == AcaPlus);

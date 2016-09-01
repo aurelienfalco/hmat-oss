@@ -48,7 +48,8 @@ public:
     \return true  if 2 nodes are admissible.
 
    */
-  virtual bool isAdmissible(const ClusterTree& rows, const ClusterTree& cols) = 0;
+  virtual bool isAdmissible(const ClusterTree& rows, const ClusterTree& cols,
+      bool* rowsAdmissible = NULL, bool* colsAdmissible = NULL) = 0;
   /*! \brief Clean up data which may be allocated by isAdmissible  */
   virtual void clean(const ClusterTree&) const {}
 
@@ -67,7 +68,8 @@ class StandardAdmissibilityCondition : public AdmissibilityCondition
 public:
   StandardAdmissibilityCondition(double eta, size_t maxElementsPerBlock = 5000000,
                                  size_t maxElementsPerBlockAca = 0);
-  bool isAdmissible(const ClusterTree& rows, const ClusterTree& cols);
+  bool isAdmissible(const ClusterTree& rows, const ClusterTree& cols,
+    bool* rowsAdmissible = NULL, bool* colsAdmissible = NULL);
   void clean(const ClusterTree& current) const;
   std::string str() const;
   void setEta(double eta);
