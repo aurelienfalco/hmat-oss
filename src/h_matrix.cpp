@@ -104,11 +104,14 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
                     SymmetryFlag symFlag, AdmissibilityCondition * admissibilityCondition)
   : Tree<HMatrix<T> >(NULL), RecursionMatrix<T, HMatrix<T> >(), rows_(_rows), cols_(_cols), rk_(NULL), rank_(UNINITIALIZED_BLOCK),
     isUpper(false), isLower(false),
-    isTriUpper(false), isTriLower(false), admissible(false), temporary(false), ownClusterTree_(false),
+    isTriUpper(false), isTriLower(false), admissible(false), temporary(false), rowsAdmissible(false), colsAdmissible(false), ownClusterTree_(false),
     localSettings(settings)
 {
-  admissible = admissibilityCondition->isAdmissible(*(rows_), *(cols_));
-  if (_rows->isLeaf() || _cols->isLeaf() || admissible) {
+  bool rowsAdmissible_, colsAdmissible_; // can't give bitfield to isAdmissible() so temporary variables
+  admissible = admissibilityCondition->isAdmissible(*(rows_), *(cols_), &rowsAdmissible_, &colsAdmissible_);
+  rowsAdmissible = rowsAdmissible_;
+  colsAdmissible = colsAdmissible_;
+  if ( ((_rows->isLeaf() || _cols->isLeaf()) && (rowsAdmissible == colsAdmissible)) || admissible ) {
     if (admissible) {
       // 'admissible' is also the criteria to choose Rk or Full.
       // if (admissible), we create a Rk, otherwise assembly will create a full (see void AssemblyFunction<T>::assemble)
@@ -121,12 +124,16 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
     isTriUpper = false;
     isTriLower = false;
     for (int i = 0; i < nrChildRow(); ++i) {
+      // if rows not admissible, don't recurse on them
+      ClusterTree* rowChild = (rowsAdmissible ? _rows : static_cast<ClusterTree*>(_rows->getChild(i)));
       for (int j = 0; j < nrChildCol(); ++j) {
+        // if cols not admissible, don't recurse on them
+        ClusterTree* colChild = (colsAdmissible ? _cols : static_cast<ClusterTree*>(_cols->getChild(j)));
         if ((symFlag == kNotSymmetric) || (isUpper && (i <= j)) || (isLower && (i >= j))) {
-          this->insertChild(i, j, new HMatrix<T>(_rows->getChild(i), _cols->getChild(j), settings, (i == j ? symFlag : kNotSymmetric), admissibilityCondition));
-         }
-       }
-     }
+            this->insertChild(i, j, new HMatrix<T>(rowChild, colChild, settings, (i == j ? symFlag : kNotSymmetric), admissibilityCondition));
+        }
+      }
+    }
   }
   admissibilityCondition->clean(*(rows_));
   admissibilityCondition->clean(*(cols_));
@@ -144,6 +151,8 @@ template<typename T> HMatrix<T> * HMatrix<T>::internalCopy(bool temporary, bool 
     HMatrix<T> * r = new HMatrix<T>(localSettings.global);
     r->rows_ = rows_;
     r->cols_ = cols_;
+    r->rowsAdmissible = rowsAdmissible;
+    r->colsAdmissible = colsAdmissible;
     r->temporary = temporary;
     if(withChildren) {
         for(int i = 0; i < nrChildRow(); i++) {
@@ -152,8 +161,8 @@ template<typename T> HMatrix<T> * HMatrix<T>::internalCopy(bool temporary, bool 
                 child->temporary = temporary;
                 assert(rows_->getChild(i) != NULL);
                 assert(cols_->getChild(j) != NULL);
-                child->rows_ = dynamic_cast<ClusterTree*>(rows_->getChild(i));
-                child->cols_ = dynamic_cast<ClusterTree*>(cols_->getChild(j));
+                child->rows_ = get(i,j)->rows_;
+                child->cols_ = get(i,j)->cols_;
                 child->rk(new RkMatrix<T>(NULL, &child->rows_->data,
                                                  NULL, &child->cols_->data,
                                                  NoCompression));
@@ -225,7 +234,7 @@ HMatrix<T>* HMatrix<T>::Zero(const ClusterTree* rows, const ClusterTree* cols,
   } else {
     for (int i = 0; i < h->nrChildRow(); ++i) {
       for (int j = 0; j < h->nrChildCol(); ++j) {
-        h->insertChild(i, j, HMatrix<T>::Zero(h->rows_->getChild(i), h->cols_->getChild(j), settings, admissibilityCondition));
+        h->insertChild(i, j, HMatrix<T>::Zero(h->get(i,j)->rows_, h->get(i,j)->cols_, settings, admissibilityCondition));
       }
     }
   }
@@ -1329,6 +1338,9 @@ template<typename T> void HMatrix<T>::transposeNoRecurse() {
 
 template<typename T>
 void HMatrix<T>::transpose() {
+  bool tmp = colsAdmissible; // can't use swap on bitfield so manual swap...
+  colsAdmissible = rowsAdmissible;
+  rowsAdmissible = tmp;
   if (!this->isLeaf()) {
     this->transposeNoRecurse();
     for (int i=0 ; i<this->nrChild() ; i++)
@@ -2335,4 +2347,3 @@ namespace hmat {
   template class RecursionMatrix<Z_t, HMatrix<Z_t> >;
 
 }  // end namespace hmat
-
