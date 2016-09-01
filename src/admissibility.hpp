@@ -57,6 +57,23 @@ public:
 };
 
 /**
+ * @brief Admissibility criteria that returns two booleans, one for rows and one for cols.
+ * For each ClusterTree:
+ * true if its size is x times smaller than the other.
+ * It allows then to handle Tall & Skinny blocks in H-Matrices
+ * @param x the ratio between the two sizes
+ */
+class TallSkinnyAdmissibilityCondition : public AdmissibilityCondition
+{
+public:
+  TallSkinnyAdmissibilityCondition(double x_) : x(x_) {};
+  bool isAdmissible(const ClusterTree& rows, const ClusterTree& cols,
+    bool* rowsAdmissible = NULL, bool* colsAdmissible = NULL);
+private:
+  double x;    
+};
+
+/**
  * @brief Hackbusch formula based admissibility
  *  is Hackbusch formula :
  *     min (diameter (), other-> diameter ()) <= eta * distanceTo (other);

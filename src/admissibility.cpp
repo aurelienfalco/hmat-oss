@@ -32,6 +32,24 @@
 
 namespace hmat {
 
+bool
+TallSkinnyAdmissibilityCondition::isAdmissible(const ClusterTree& rows, const ClusterTree& cols, bool* rowsAdmissible, bool* colsAdmissible)
+{
+  if (rowsAdmissible && colsAdmissible) {
+    if (rows.data.size() >= 2 * cols.data.size() && cols.isLeaf()) {
+      // rows are two times larger than cols so we won't subdivide rows
+      *colsAdmissible = true;
+      *rowsAdmissible = false;
+    } else if (cols.data.size() >= 2 * rows.data.size() && rows.isLeaf()) {
+      // cols are two times larger than rows so we won't subdivide cols
+      *colsAdmissible = false;
+      *rowsAdmissible = true;
+    } else // approximately the same size and non leaf
+      *rowsAdmissible = *colsAdmissible = false;
+  }
+  return true;
+}
+
 StandardAdmissibilityCondition::StandardAdmissibilityCondition(
     double eta, size_t maxElementsPerBlock, size_t maxElementsPerBlockRows):
     eta_(eta), maxElementsPerBlock(maxElementsPerBlock),
