@@ -70,6 +70,7 @@ StandardAdmissibilityCondition::StandardAdmissibilityCondition(
 bool
 StandardAdmissibilityCondition::isAdmissible(const ClusterTree& rows, const ClusterTree& cols, bool* rowsAdmissible, bool* colsAdmissible)
 {
+    TallSkinnyAdmissibilityCondition::isAdmissible(rows, cols, rowsAdmissible, colsAdmissible);
     CompressionMethod m = HMatSettings::getInstance().compressionMethod;
     bool isFullAlgo = !(m == AcaPartial || m == AcaPlus);
     size_t elements = ((size_t) rows.data.size()) * cols.data.size();

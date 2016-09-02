@@ -66,11 +66,11 @@ public:
 class TallSkinnyAdmissibilityCondition : public AdmissibilityCondition
 {
 public:
-  TallSkinnyAdmissibilityCondition(double x_) : x(x_) {};
+  TallSkinnyAdmissibilityCondition(double x_ = 2) : x(x_) {};
   bool isAdmissible(const ClusterTree& rows, const ClusterTree& cols,
     bool* rowsAdmissible = NULL, bool* colsAdmissible = NULL);
 private:
-  double x;    
+  double x;
 };
 
 /**
@@ -80,7 +80,7 @@ private:
  * @param eta    a parameter used in the evaluation of the admissibility.
  * @param maxElementsPerBlock limit memory size of a bloc with AcaFull and Svd compression
  */
-class StandardAdmissibilityCondition : public AdmissibilityCondition
+class StandardAdmissibilityCondition : public TallSkinnyAdmissibilityCondition
 {
 public:
   StandardAdmissibilityCondition(double eta, size_t maxElementsPerBlock = 5000000,
