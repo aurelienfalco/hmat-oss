@@ -137,6 +137,8 @@ void hmat_init_admissibility_param(hmat_admissibility_param_t * p) {
     p->eta = 2;
     p->max_svd_elements = 5000000;
     p->max_aca_elements = 0;
+    p->always = 0;
+    p->separator_force_compression = -1;
 }
 
 hmat_admissibility_t* hmat_create_admissibility(hmat_admissibility_param_t * p) {
@@ -313,4 +315,3 @@ hmat_procedure_t* hmat_create_procedure_epsilon_truncate(hmat_value_t type, doub
 void hmat_tracing_dump(char *filename) {
   tracing_dump(filename);
 }
-

@@ -237,6 +237,20 @@ typedef struct {
      * only assembling rows or cols is needed
      */
     size_t max_aca_elements;
+
+    /**
+     * Let the admissibility condition ignore eta
+     * and always return true for small enough blocks
+     */
+    int always;
+
+    /**
+     * For ND only, used to give a difference limit between
+     * separators' level above which you always compress:
+     * if separator_force_compression == 2, a block between two separators of
+     * level 2 and 4 (or more) will be compressed
+     */
+    int separator_force_compression;
 } hmat_admissibility_param_t;
 
 /** Init an hmat_admissibility_param structure with default values */
