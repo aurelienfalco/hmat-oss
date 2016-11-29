@@ -114,6 +114,15 @@ public:
     children[index] = (TreeNode*)NULL;
   }
 
+  /*! \brief Remove all children
+   */
+  void deleteChildren() {
+    for (int i=0 ; i<nrChild() ; i++)
+      if (children[i])
+        delete children[i];
+    children.clear();
+  }
+
   /*! \brief Return the number of nodes in the tree.
    */
   int nodesCount() const {
