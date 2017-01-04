@@ -436,6 +436,7 @@ template<typename T> void HMatrix<T>::info(hmat_info_t & result) {
         } else {
           if (isFullMatrix()) {
             result.full_zeros += full()->storedZeros();
+            result.full_nnz += s - full()->storedZeros();
             result.full_fit_nnz += full()->info(result, rowsMin, colsMin, rowsMax, colsMax);
             if (colsMax == 0) {
               colsMax = 0;
