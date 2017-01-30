@@ -245,6 +245,23 @@ typedef struct {
     int always;
 
     /**
+     * No compression in the H-Mat (for tests purposes)
+     */
+    int no_compression;
+
+    /**
+     * leaf-blocks too tall and skinny will be divided in their longest dimension
+     * (rows/cols) if the Cluster Tree allows it (i.e rows/cols have children)
+     */
+    int manage_tall_skinny;
+
+    /**
+     * leaf-blocks too tall and skinny will be divided in their longest dimension
+     * (rows/cols) if the Cluster Tree allows it (i.e rows/cols have children)
+     */
+    int symbolic_factorization;
+
+    /**
      * For ND only, used to give a difference limit between
      * separators' level above which you always compress:
      * if separator_force_compression == 2, a block between two separators of
