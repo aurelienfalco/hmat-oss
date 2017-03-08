@@ -636,8 +636,11 @@ bool HMatrix<T>::coarsen(double epsilon, HMatrix<T>* upper, bool force) {
   // leaves. Note that this operation could be used hierarchically.
 
   bool allRkLeaves = true;
-  const RkMatrix<T>* childrenArray[this->nrChild()];
+  int n = 0;
+  for (int i = 0; i < this->nrChild(); i++) if (this->getChild(i)) n++;
+  const RkMatrix<T>* childrenArray[n];
   size_t childrenElements = 0;
+  int j = 0;
   for (int i = 0; i < this->nrChild(); i++) {
     HMatrix<T> *child = this->getChild(i);
     if (!child) continue;
@@ -645,15 +648,16 @@ bool HMatrix<T>::coarsen(double epsilon, HMatrix<T>* upper, bool force) {
       allRkLeaves = false;
       break;
     } else {
-      childrenArray[i] = child->rk();
-      childrenElements += (childrenArray[i]->rows->size()
-                           + childrenArray[i]->cols->size()) * childrenArray[i]->rank();
+      childrenArray[j] = child->rk();
+      childrenElements += (childrenArray[j]->rows->size()
+                           + childrenArray[j]->cols->size()) * childrenArray[j]->rank();
     }
+    j++;
   }
   if (allRkLeaves) {
-    std::vector<T> alpha(this->nrChild(), Constants<T>::pone);
+    std::vector<T> alpha(n, Constants<T>::pone);
     RkMatrix<T> * candidate = new RkMatrix<T>(NULL, rows(), NULL, cols(), NoCompression);
-    candidate->formattedAddParts(&alpha[0], childrenArray, this->nrChild(), epsilon);
+    candidate->formattedAddParts(&alpha[0], childrenArray, n, epsilon);
     size_t elements = (((size_t) candidate->rows->size()) + candidate->cols->size()) * candidate->rank();
     if (force || elements < childrenElements) {
       // Replace 'this' by the new Rk matrix
