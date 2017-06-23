@@ -723,6 +723,9 @@ template<typename T> void RkMatrix<T>::gemmRk(char transHA, char transHB,
         } // k loop
       } // j loop
     } // i loop
+    // if ha and hb have no 'compatible' children, subRks is null
+    if (*subRks == NULL)
+      return;
     // Reconstruction of C by adding the parts
     std::vector<T> alpha(nbRows * nbCols, Constants<T>::pone);
     RkMatrix<T>* rk = formattedAddParts(&alpha[0], (const RkMatrix<T>**) subRks, nbRows * nbCols);
