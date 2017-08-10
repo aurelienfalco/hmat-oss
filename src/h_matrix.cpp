@@ -437,14 +437,9 @@ template<typename T> void HMatrix<T>::info(hmat_info_t & result) {
           if (isFullMatrix()) {
             result.full_zeros += full()->storedZeros();
             result.full_nnz += s - full()->storedZeros();
-            result.full_fit_nnz += full()->info(result, rowsMin, colsMin, rowsMax, colsMax);
-            if (colsMax == 0) {
-              colsMax = 0;
-              colsMin = 0;
-              rowsMax = 0;
-              rowsMin = 0;
-            } else
-              result.full_square_fit_nnz += (colsMax - colsMin) * (rowsMax - rowsMin);
+            size_t fit = full()->info(result, rowsMin, colsMin, rowsMax, colsMax);
+            result.full_fit_nnz += fit;
+            result.full_square_fit_nnz += (colsMax+1 - colsMin) * (rowsMax+1 - rowsMin);
             RkMatrix<T>* rk = compressMatrix(full()->copy());
             result.full_as_rk_size += rk->compressedSize();
             HMatrix<T> * tmpMatrix = new HMatrix<T>(this->localSettings.global);
