@@ -60,7 +60,7 @@ static double writeHeader(ofstream & file, int maxDim)
          << "/grayrectangle {" << endl
          << "        newpath" << endl
          << "	     setlinewidth"  << endl
-         << "        0.83 setgray" << endl
+         << "        1 setgray" << endl
          << "        moveto" << endl
          << "        rlineto" << endl
          << "        rlineto" << endl
@@ -190,7 +190,7 @@ void PostscriptDumper<T>::drawMatrix(const void *tree, ofstream& f, int depth, b
             double color = 0;
             double ratioMax = .8;
             double colorMin = .5;
-            if (ratio >= 1) colorMin = 0;
+            if (ratio >= 1) color = 0;
             else if (ratio < ratioMax) {
                 color = 1 - (1-colorMin)/ratioMax * ratio;
             } else color = colorMin;
@@ -216,13 +216,24 @@ void PostscriptDumper<T>::drawMatrix(const void *tree, ofstream& f, int depth, b
               << 0 << " " << lengthY << " "
               << lengthX << " " << 0 << " "
               << startX << " " << startY;
+            int value = (int) ceil(100 * (1-ratio));
             if (ratio < 0.8)
               f << " " << max((0.2+ratio),0.6) << " 0 0";
+            else if (value == 0)
+            f << " " << "1 1 0";
+              // f << " " << "1 1 1";
             else
               f << " " << "1 " << color << " " << color;
+            (void)color;
             f << " redrectangle" << endl;
             // value to write: percentage of non-zeros
-            int value = (int) (100 * (1-ratio));
+            // value = (int) m->cols()->offset();
+            value = (int) m->rows()->offset()
+             + m->rows()->size()
+            ;
+            (void)value;
+            // std::cout << ratio<< " " << value << std::endl;
+            // std::cout << value << std::endl;
             // size of the characters
             double size= (value>=100?.5:0.7) * min(-lengthY,lengthX);
             f << startX + 10 - depth << " " << startY + (lengthY * .75) << " " << size
@@ -233,12 +244,14 @@ void PostscriptDumper<T>::drawMatrix(const void *tree, ofstream& f, int depth, b
              << 0 << " " << lengthY << " "
              << lengthX << " " << 0 << " "
              << startX << " " << startY;
-           f << " 1 1 1 "
+             f << " .9 .9 .9"
+          //  f << " 1 1 1"
              << " greenrectangle" << endl;
-           f << startX << " " << startY + (lengthY * .95) << " " << .7 * std::min(lengthX, - lengthY)
-             << " (" << 0 << ") showrank" << endl;
+          //  f << startX << " " << startY + (lengthY * .95) << " " << .7 * std::min(lengthX, - lengthY)
+          //    << " (" << 0 << ") showrank" << endl;
        }
-    } else if(cross){ /* true pour une hmat, !(handle->position == kAboveL0) pour une HMatrixHandle */
+     } else if(cross){ /* true pour une hmat, !(handle->position == kAboveL0) pour une HMatrixHandle */
+    // } else if(false){ /* true pour une hmat, !(handle->position == kAboveL0) pour une HMatrixHandle */
         int n = m->rows()->coordinates()->size();
         int startX = m->cols()->offset();
         int startY = m->rows()->offset();
