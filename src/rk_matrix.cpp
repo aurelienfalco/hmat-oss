@@ -516,8 +516,13 @@ void RkMatrix<T>::formattedAddParts(const T* alpha, const RkMatrix<T>* const * p
   if (rankTotal >= std::min(rows->size(), cols->size())) {
     const FullMatrix<T>** fullParts = new const FullMatrix<T>*[notNullParts];
     fullParts[0] = NULL ;
-    for (int i = rank() ? 1 : 0 ; i < notNullParts; i++) // exclude usedParts[0] if it is 'this'
+    for (int i = rank() ? 1 : 0 ; i < notNullParts; i++){ // exclude usedParts[0] if it is 'this'
+      if (!parts[i]) {
+        fullParts[i] = NULL;
+        continue;
+      }
       fullParts[i] = usedParts[i]->eval();
+    }
     formattedAddParts(usedAlpha, fullParts, notNullParts);
     for (int i = 0; i < notNullParts; i++)
       delete fullParts[i];
