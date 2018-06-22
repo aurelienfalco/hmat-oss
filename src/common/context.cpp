@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
 #include <vector>
 #include <iostream>
 #include <fstream>
