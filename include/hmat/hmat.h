@@ -289,6 +289,10 @@ HMAT_API int hmat_cluster_get_info(hmat_cluster_tree_t *tree, hmat_cluster_info_
 typedef struct {
     /** eta for Hackbusch condition */
     double eta;
+    /**
+     * Opaque pointer to store user data
+     */
+    void* user_data;
 } hmat_admissibility_param_t;
 
 /** Init an hmat_admissibility_param structure with default values */
