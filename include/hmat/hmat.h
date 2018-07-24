@@ -303,6 +303,10 @@ typedef struct {
      * only assembling rows or cols is needed
      */
     size_t max_aca_elements;
+    /**
+     * Opaque pointer to store user data
+     */
+    void* user_data;
 } hmat_admissibility_param_t;
 
 /** Init an hmat_admissibility_param structure with default values */
