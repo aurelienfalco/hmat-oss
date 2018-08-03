@@ -29,6 +29,7 @@
 
 #include <cstddef>
 #include <string>
+#include <vector>
 
 namespace hmat {
 
@@ -92,6 +93,8 @@ public:
 
    */
   virtual std::pair<bool, bool> splitRowsCols(const ClusterTree& rows, const ClusterTree& cols) const;
+
+  virtual std::vector<ClusterTree*> subDivideRows(const ClusterTree& rows, const ClusterTree& cols);
 
   /**
    * Return true if the block is always null,

@@ -128,9 +128,42 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
     const bool forceFull = admissibilityCondition->forceFull(*rows_, *cols_);
     const bool forceRk   = admissibilityCondition->forceRk(*rows_, *cols_);
     assert(!(forceFull && forceRk));
-    if (forceRk || (lowRank && !forceFull))
+    if (forceRk || (lowRank && !forceFull)){
       rk(NULL);
-    approximateRank_ = admissibilityCondition->getApproximateRank(*(rows_), *(cols_));
+      approximateRank_ = admissibilityCondition->getApproximateRank(*(rows_), *(cols_));
+    }
+    else {
+      std::vector<ClusterTree*> subSets;
+      bool subdivide = true;
+      if (subdivide) {
+        if (rows_->data.offset() < cols_->data.offset())
+        subSets = admissibilityCondition->subDivideRows(*cols_, *rows_);
+        else
+        subSets = admissibilityCondition->subDivideRows(*rows_, *cols_);
+
+        if (rows_->data.offset() < cols_->data.offset()) {
+          keepSameCols = false;
+          ClusterTree* colsCopy = cols_->slice(cols_->data.offset(), cols_->data.size());
+          for (int i = 0; i < subSets.size(); ++i) {
+            colsCopy->insertChild(i, subSets[i]);
+            this->insertChild(i, 0, new HMatrix<T>(const_cast<ClusterTree*>(rows_), const_cast<ClusterTree*>(subSets[i]), settings, _depth+1, kNotSymmetric, admissibilityCondition));
+          }
+          cols_ = colsCopy;
+        }
+        else{
+          keepSameRows = false;
+          ClusterTree* rowsCopy = rows_->slice(rows_->data.offset(), rows_->data.size());
+          for (int i = 0; i < subSets.size(); ++i) {
+            rowsCopy->insertChild(i, subSets[i]);
+            this->insertChild(i, 0, new HMatrix<T>(const_cast<ClusterTree*>(subSets[i]), const_cast<ClusterTree*>(cols_), settings, _depth+1, kNotSymmetric, admissibilityCondition));
+          }
+          rows_ = rowsCopy;
+        }
+      }
+
+      if (subSets.empty())
+      approximateRank_ = admissibilityCondition->getApproximateRank(*(rows_), *(cols_));
+    }
   } else {
     pair<bool, bool> split = admissibilityCondition->splitRowsCols(*rows_, *cols_);
     assert(split.first || split.second);

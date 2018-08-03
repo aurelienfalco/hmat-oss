@@ -38,6 +38,11 @@ AdmissibilityCondition::splitRowsCols(const ClusterTree& rows, const ClusterTree
 StandardAdmissibilityCondition::StandardAdmissibilityCondition(double eta, double ratio):
     eta_(eta), ratio_(ratio) {}
 
+std::vector<ClusterTree*>
+AdmissibilityCondition::subDivideRows(const ClusterTree& rows, const ClusterTree& cols) {
+  return {};
+}
+
 std::pair<bool, bool>
 StandardAdmissibilityCondition::splitRowsCols(const ClusterTree& rows, const ClusterTree& cols) const
 {
