@@ -146,18 +146,37 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
           ClusterTree* colsCopy = cols_->slice(cols_->data.offset(), cols_->data.size());
           for (int i = 0; i < subSets.size(); ++i) {
             colsCopy->insertChild(i, subSets[i]);
-            this->insertChild(i, 0, new HMatrix<T>(const_cast<ClusterTree*>(rows_), const_cast<ClusterTree*>(subSets[i]), settings, _depth+1, kNotSymmetric, admissibilityCondition));
           }
           cols_ = colsCopy;
+          for (int i = 0; i < subSets.size(); ++i) {
+            if (rows_->isLeaf())
+              this->insertChild(0, i, new HMatrix<T>(const_cast<ClusterTree*>(rows_), const_cast<ClusterTree*>(subSets[i]), settings, _depth+1, kNotSymmetric, admissibilityCondition));
+            else {
+              keepSameRows = false;
+              for (int j = 0; j < nrChildRow(); ++j) {
+                this->insertChild(j, i, new HMatrix<T>(const_cast<ClusterTree*>(rows_->getChild(j)), const_cast<ClusterTree*>(subSets[i]), settings, _depth+1, kNotSymmetric, admissibilityCondition));
+              }
+            }
+          }
         }
         else{
           keepSameRows = false;
           ClusterTree* rowsCopy = rows_->slice(rows_->data.offset(), rows_->data.size());
           for (int i = 0; i < subSets.size(); ++i) {
             rowsCopy->insertChild(i, subSets[i]);
-            this->insertChild(i, 0, new HMatrix<T>(const_cast<ClusterTree*>(subSets[i]), const_cast<ClusterTree*>(cols_), settings, _depth+1, kNotSymmetric, admissibilityCondition));
           }
           rows_ = rowsCopy;
+          for (int i = 0; i < subSets.size(); ++i) {
+            if (cols_->isLeaf())
+              this->insertChild(i, 0, new HMatrix<T>(const_cast<ClusterTree*>(subSets[i]), const_cast<ClusterTree*>(cols_), settings, _depth+1, kNotSymmetric, admissibilityCondition));
+            else {
+              keepSameCols = false;
+              for (int j = 0; j < nrChildCol(); ++j) {
+                this->insertChild(i, j, new HMatrix<T>(const_cast<ClusterTree*>(subSets[i]), const_cast<ClusterTree*>(cols_->getChild(j)), settings, _depth+1, kNotSymmetric, admissibilityCondition));
+
+              }
+            }
+          }
         }
       }
 
