@@ -544,6 +544,17 @@ public:
     delete this;
   }
 
+  /*! \brief Return the ith child of rows, or rows_ if no children.
+   */
+  const ClusterTree * rowChild(int i) const {
+    return (rows_->isLeaf()) ? rows_ : rows_->getChild(i);
+  }
+  /*! \brief Return the ith child of columns, or cols_ if no children.
+   */
+  const ClusterTree * colChild(int i) const {
+    return (cols_->isLeaf()) ? cols_ : cols_->getChild(i);
+  }
+
   /*! Return the child (i, j) of this.
 
     \warning do not use on a leaf !
@@ -608,6 +619,7 @@ public:
   short isUpper:1, isLower:1,       /// symmetric, upper or lower stored
        isTriUpper:1, isTriLower:1, /// upper/lower triangular
        keepSameRows:1, keepSameCols:1,
+       dividedLeaves:1,
        temporary_:1, ownRowsClusterTree_:1, ownColsClusterTree_:1;
   LocalSettings localSettings;
 

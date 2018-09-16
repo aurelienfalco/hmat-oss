@@ -94,6 +94,9 @@ public:
    */
   virtual std::pair<bool, bool> splitRowsCols(const ClusterTree& rows, const ClusterTree& cols) const;
 
+  /*! \brief Split rows according to symbolic information from cols
+    \return a vector of splitted rows
+   */
   virtual std::vector<ClusterTree*> subDivideRows(const ClusterTree& rows, const ClusterTree& cols);
 
   /**

@@ -107,7 +107,7 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
     rows_(_rows), cols_(_cols), rk_(NULL),
     rank_(UNINITIALIZED_BLOCK), approximateRank_(UNINITIALIZED_BLOCK),
     isUpper(false), isLower(false),
-    isTriUpper(false), isTriLower(false), keepSameRows(true), keepSameCols(true), temporary_(false),
+    isTriUpper(false), isTriLower(false), keepSameRows(true), keepSameCols(true), dividedLeaves(false), temporary_(false),
     ownRowsClusterTree_(false), ownColsClusterTree_(false), localSettings(settings)
 {
   if (isVoid())
@@ -180,8 +180,10 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
         }
       }
 
-      if (subSets.empty())
-      approximateRank_ = admissibilityCondition->getApproximateRank(*(rows_), *(cols_));
+      if (subSets.empty()) // we did not divide leaves after all
+        approximateRank_ = admissibilityCondition->getApproximateRank(*(rows_), *(cols_));
+      else // we confirm we have divided leaves
+        dividedLeaves = true;
     }
   } else {
     pair<bool, bool> split = admissibilityCondition->splitRowsCols(*rows_, *cols_);
@@ -215,8 +217,8 @@ HMatrix<T>::HMatrix(const hmat::MatrixSettings * settings) :
     Tree<HMatrix<T> >(NULL), RecursionMatrix<T, HMatrix<T> >(), rows_(NULL), cols_(NULL),
     rk_(NULL), rank_(UNINITIALIZED_BLOCK), approximateRank_(UNINITIALIZED_BLOCK),
     isUpper(false), isLower(false), isTriUpper(false), isTriLower(false),
-    keepSameRows(true), keepSameCols(true), temporary_(false), ownRowsClusterTree_(false),
-    ownColsClusterTree_(false), localSettings(settings)
+    keepSameRows(true), keepSameCols(true), dividedLeaves(false), temporary_(false),
+    ownRowsClusterTree_(false), ownColsClusterTree_(false), localSettings(settings)
     {}
 
 template<typename T> HMatrix<T> * HMatrix<T>::internalCopy(bool temporary, bool withRowChild, bool withColChild) const {
@@ -1170,6 +1172,110 @@ HMatrix<T>::recursiveGemm(char transA, char transB, T alpha, const HMatrix<T>* a
     // Computing a(m,0) * b(0,n) here may give wrong results because of format conversions, exit early
     if(isVoid() || a->isVoid())
         return;
+
+
+    if (this->dividedLeaves || a->dividedLeaves || b->dividedLeaves) {
+      if (!this->isLeaf() || !a->isLeaf() || !b->isLeaf()){
+        /* The two nested loops search through the children of rows of A and 'this'
+           and children of cols of B and 'this'.
+           Each row/col has its own control variable (i, ia, j, jb).
+           If clusters are perfectly aligned, we increment those variables together
+           so as to reproduce the same behavior as the original algorithm
+           (see end of loop).
+           In an effort to minimize code duplication, we handle each hmat as
+           either a leaf or its children, this is why the end condition of the
+           loops are std::max(1, nrChildRow()) :
+           if 'this' is a leaf, we step once (and only once) in the loop.
+           The function rowChild() has been coded so as to return 'this'
+           if 'this' is a leaf, allowing us to re-use the same code for both cases.
+           Example of situations that may arise (representation not to scale!):
+           a->rowsTree()->children    = [0, 1] [3, 1]      [5,          5]
+           this->rowsTree()->children = [0, 1]       [4, 1][5, 1][6, 1]
+           Or another situation (even worse!):
+           b->colsTree()->children    = [0,     5]     [10, 5]
+           this->colsTree()->children = [0, 2][3, 5] [9,     7]
+         */
+        int i = 0, ia = 0;
+        while (i < std::max(1, nrChildRow()) && ia < std::max(1, (transA=='N' ? a->nrChildRow() : a->nrChildCol()))) {
+          /* If this->rows() and b->rows() are not aligned, try to find a common cluster
+          by interating over the children until two intersect (and do this for cols later).
+            All of this is skipped if they are already aligned.
+            TODO: there are four duplicates of the following loop, for each case
+              -> create a function to factorize this code?
+          */
+          while (a->rowChild(ia)->data.offset() >= rowChild(i)->data.offset() + rowChild(i)->data.size()){
+            i++; /// A row child ordered after this's row child so get next this' child
+            if (i >= nrChildRow()) return; /// no more candidates, stop
+          }
+          if (!this->isLeaf() && i >= nrChildRow()) return;/// if a leaf, we continue
+          while (rowChild(i)->data.offset() >= a->rowChild(ia)->data.offset() + a->rowChild(ia)->data.size()){
+            ia++; /// this' row child ordered after A row child so get next A's child
+            if (ia >= a->nrChildRow()) return; /// no more candidates, stop
+          }
+          if (!a->isLeaf() && ia >= a->nrChildRow()) return;/// if a leaf, we continue
+
+          /* second nested loop, on cols */
+          int j = 0, jb = 0;
+          while (j < std::max(1, nrChildCol()) && jb < std::max(1, (transB=='N' ? b->nrChildCol() : b->nrChildRow()))) {
+            while (b->colChild(jb)->data.offset() >= colChild(j)->data.offset() + colChild(j)->data.size()){
+              j++;/// B col child ordered after this' col child so get next this' child
+              if (j >= nrChildCol()) break;
+            }
+            if (!this->isLeaf() && j >= nrChildCol()) break;
+            while (colChild(j)->data.offset() >= b->colChild(jb)->data.offset() + b->colChild(jb)->data.size()){
+              jb++;/// this's col child ordered after B col child so get next B's child
+              if (jb >= b->nrChildCol()) break;
+            }
+            if (!b->isLeaf() && jb >= b->nrChildCol()) break;
+
+            /* If no child, use 'this' */
+            HMatrix<T>* child = this->isLeaf() ? this : get(i, j);
+            if (!child) { // symmetric/triangular case or empty block coming from symbolic factorisation of sparse matrices
+                continue;
+            }
+            // Void child
+            if (child->isVoid()) continue;
+
+            const HMatrix<T> *childA, *childB;
+            for (int k = 0; k < std::max(1 , (transA=='N' ? a->nrChildCol() : a->nrChildRow())); k++) {
+              char tA = transA;
+              char tB = transB;
+              /* Now children have intersecting clusters so we can compute a gemm
+                We use the parent instead if no child */
+              childA = a->isLeaf() ? a : a->getChildForGEMM(tA, ia, k);
+              childB = b->isLeaf() ? b : b->getChildForGEMM(tB, k, jb);
+
+              if (childA && childB)
+                if (childA->rows()->intersects(*child->rows()) && childB->cols()->intersects(*child->cols())){
+                  /* rows and cols are compatible  */
+                  child->gemm(tA, tB, alpha, childA, childB, Constants<T>::pone);
+                }
+              }
+              /* Iterate over whichever is ordered before, or both at once if aligned */
+              if (b->colChild(jb)->data.offset() + b->colChild(jb)->data.size() > colChild(j)->data.offset() + colChild(j)->data.size()){
+                j++;/// someone may still be compatible with jb -> jb not incremented
+              } else if (b->colChild(jb)->data.offset() + b->colChild(jb)->data.size() < colChild(j)->data.offset() + colChild(j)->data.size()){
+                jb++;/// someone may still be compatible with j -> j not incremented
+              } else {
+                j++;
+                jb++;
+              }
+          }
+          /* Same as for cols, iterate over the cluster first ordered */
+          if (a->rowChild(ia)->data.offset() + a->rowChild(ia)->data.size() > rowChild(i)->data.offset() + rowChild(i)->data.size()){
+            i++;
+          } else if (a->rowChild(ia)->data.offset() + a->rowChild(ia)->data.size() < rowChild(i)->data.offset() + rowChild(i)->data.size()){
+            ia++;
+          } else {
+            i++;
+            ia++;
+          }
+        }
+      }
+      else // if (!this->isLeaf() || !a->isLeaf() || !b->isLeaf())
+        uncompatibleGemm(transA, transB, alpha, a, b);
+      return;
+    }
 
     // None of the matrices is a leaf
     if (!this->isLeaf() && !a->isLeaf() && !b->isLeaf()) {
