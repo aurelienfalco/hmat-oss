@@ -1098,17 +1098,17 @@ makeCompatible(bool row_a, bool row_b,
     else // or the cols
         out_a = in_a->subset(in_a->rows(), cdb);
 
-    // if A has changed, B won't change so we bypass this second step
-    if(out_a == in_a) {
-        // suppose than B is bigger than A: B will change, not A
-        const IndexSet * cda = row_a ? in_a->rows() : in_a->cols();
-        if(row_b)
-            out_b = in_b->subset(cda, in_b->cols());
-        else
-            out_b = in_b->subset(in_b->rows(), cda);
-    }
+    /* if A has changed, B may still change if neither is a subset of the other,
+      if they simply intersect each other (sparse case only).
+     Otherwise, if it IS the case, subset() will return immediately anyway
+     */
+
+    // suppose than B is bigger than A: B will change, not A
+    const IndexSet * cda = row_a ? in_a->rows() : in_a->cols();
+    if(row_b)
+        out_b = in_b->subset(cda, in_b->cols());
     else
-        out_b = const_cast<HMatrix<T> *>(in_b);
+        out_b = in_b->subset(in_b->rows(), cda);
 }
 
 /**
