@@ -453,9 +453,13 @@ template<typename T> void HMatrix<T>::info(hmat_info_t & result) {
             if(!rk())
                 rk(new RkMatrix<T>(NULL, rows(), NULL, cols(), NoCompression));
 
+            result.memory += mem*sizeof(T);
+            result.memory += sizeof(*rk());
+            size_t rk_compressed_zeros = rk()->storedZeros();
+            result.rk_compressed_zeros += rk_compressed_zeros;
+            result.rk_compressed_nnz += mem - rk_compressed_zeros;
+
             if (fitStudy) {
-              result.memory += mem*sizeof(T);
-              result.memory += sizeof(*rk());
               FullMatrix<T>* rk_eval = rk()->eval();
               result.rk_fit_nnz += rk_eval->info(result, rowsMin, colsMin, rowsMax, colsMax);
               if (colsMax == 0) {
@@ -478,12 +482,9 @@ template<typename T> void HMatrix<T>::info(hmat_info_t & result) {
               RkMatrix<T>* newRk = const_cast<RkMatrix<T>*>(rk()->subset(tmpMatrix->rows(), tmpMatrix->cols()));
               result.rk_fit_compressed_size += newRk->rank() * (((size_t)newRk->rows->size()) + newRk->cols->size());
               size_t rk_eval_zeros = rk_eval->storedZeros();
-              size_t rk_compressed_zeros = rk()->storedZeros();
               result.rk_as_full_size += rk()->uncompressedSize();
               result.rk_eval_zeros += rk_eval_zeros;
               result.rk_eval_nnz += s - rk_eval_zeros;
-              result.rk_compressed_zeros += rk_compressed_zeros;
-              result.rk_compressed_nnz += mem - rk_compressed_zeros;
             }
             int dim = result.largest_rk_dim_cols + result.largest_rk_dim_rows;
             if(rows()->size() + cols()->size() > dim) {
@@ -503,10 +504,9 @@ template<typename T> void HMatrix<T>::info(hmat_info_t & result) {
           if (isFullMatrix()) {
             result.memory += sizeof(*full());
             result.memory += s*sizeof(T);
-
             result.full_zeros += full()->storedZeros();
+            result.full_nnz += s - full()->storedZeros();
             if (fitStudy) {
-              result.full_nnz += s - full()->storedZeros();
               size_t fit = full()->info(result, rowsMin, colsMin, rowsMax, colsMax);
               result.full_fit_nnz += fit;
               result.full_square_fit_nnz += (colsMax+1 - colsMin) * (rowsMax+1 - rowsMin);
