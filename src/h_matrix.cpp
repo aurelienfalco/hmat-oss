@@ -1036,7 +1036,7 @@ template<typename T> HMatrix<T> * HMatrix<T>::subset(
 {
     if((this->rows() == rows && this->cols() == cols) ||
        (*(this->rows()) == *rows && *(this->cols()) == *cols) ||
-       (!rows->isSubset(*(this->rows())) || !cols->isSubset(*(this->cols())))) // TODO cette ligne me parait louche... si rows et cols sont pas bons, on renvoie 'this' sans meme se plaindre ???
+       (rows->isStrictSuperSet(*(this->rows())) || cols->isStrictSuperSet(*(this->cols())))) // this is already subset of rows or cols: return this
         return const_cast<HMatrix<T>*>(this);
 
     // this could be implemented but if you need it you more
@@ -1048,6 +1048,10 @@ template<typename T> HMatrix<T> * HMatrix<T>::subset(
         tmpMatrix->temporary_=true;
         ClusterTree * r = rows_->slice(rows->offset(), rows->size());
         ClusterTree * c = cols_->slice(cols->offset(), cols->size());
+        /* Get intersection instead of subset to handle 'sparse' format.
+          Subset() of [0, 10] and [5, 10] will return [5, 5]. */
+        r->data.intersection(*this->rows(), *rows);
+        c->data.intersection(*this->cols(), *cols);
 
         // ensure the cluster tree are properly freed
         r->father = r;
