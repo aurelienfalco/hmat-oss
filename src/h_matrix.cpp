@@ -149,12 +149,15 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
           }
           cols_ = colsCopy;
           for (int i = 0; i < subSets.size(); ++i) {
-            if (rows_->isLeaf())
+            if (rows_->isLeaf()){
               this->insertChild(0, i, new HMatrix<T>(const_cast<ClusterTree*>(rows_), const_cast<ClusterTree*>(subSets[i]), settings, _depth+1, kNotSymmetric, admissibilityCondition));
+              this->get(0,i)->dividedLeaves = true;
+            }
             else {
               keepSameRows = false;
               for (int j = 0; j < nrChildRow(); ++j) {
                 this->insertChild(j, i, new HMatrix<T>(const_cast<ClusterTree*>(rows_->getChild(j)), const_cast<ClusterTree*>(subSets[i]), settings, _depth+1, kNotSymmetric, admissibilityCondition));
+                this->get(j,i)->dividedLeaves = true;
               }
             }
           }
@@ -167,13 +170,15 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
           }
           rows_ = rowsCopy;
           for (int i = 0; i < subSets.size(); ++i) {
-            if (cols_->isLeaf())
+            if (cols_->isLeaf()){
               this->insertChild(i, 0, new HMatrix<T>(const_cast<ClusterTree*>(subSets[i]), const_cast<ClusterTree*>(cols_), settings, _depth+1, kNotSymmetric, admissibilityCondition));
+              this->get(i,0)->dividedLeaves = true;
+            }
             else {
               keepSameCols = false;
               for (int j = 0; j < nrChildCol(); ++j) {
                 this->insertChild(i, j, new HMatrix<T>(const_cast<ClusterTree*>(subSets[i]), const_cast<ClusterTree*>(cols_->getChild(j)), settings, _depth+1, kNotSymmetric, admissibilityCondition));
-
+                this->get(i,j)->dividedLeaves = true;
               }
             }
           }
@@ -1179,6 +1184,24 @@ HMatrix<T>::recursiveGemm(char transA, char transB, T alpha, const HMatrix<T>* a
 
 
     if (this->dividedLeaves || a->dividedLeaves || b->dividedLeaves) {
+      if (this->isRkMatrix()){
+        /* As it is not possible to compute a subset on Rk-Matrices,
+        we create a temporary full-matrix, compute the gemm() and add it to this */
+        HMatrix<T> * tmpMatrix = new HMatrix<T>(this->localSettings.global);
+        tmpMatrix->temporary_=true;
+        tmpMatrix->ownClusterTrees(true, true);
+        ClusterTree * r = rows_->slice(rows()->offset(),rows()->size());
+        ClusterTree * c = cols_->slice(cols()->offset(),cols()->size());
+        r->father = r;
+        c->father = c;
+        tmpMatrix->rows_ = r;
+        tmpMatrix->cols_ = c;
+        tmpMatrix->dividedLeaves = this->dividedLeaves;
+        tmpMatrix->full(new FullMatrix<T>(rows(), cols()));
+        tmpMatrix->recursiveGemm(transA, transB, alpha, a, b);
+        this->axpy(Constants<T>::pone, tmpMatrix);
+        delete tmpMatrix;
+      } else
       if (!this->isLeaf() || !a->isLeaf() || !b->isLeaf()){
         /* The two nested loops search through the children of rows of A and 'this'
            and children of cols of B and 'this'.
