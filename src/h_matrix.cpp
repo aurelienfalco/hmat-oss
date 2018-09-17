@@ -1230,30 +1230,30 @@ HMatrix<T>::recursiveGemm(char transA, char transB, T alpha, const HMatrix<T>* a
             TODO: there are four duplicates of the following loop, for each case
               -> create a function to factorize this code?
           */
-          while (a->rowChild(ia)->data.offset() >= rowChild(i)->data.offset() + rowChild(i)->data.size()){
+          while ((transA=='N' ? a->rowChild(ia) : a->colChild(ia))->data.offset() >= rowChild(i)->data.offset() + rowChild(i)->data.size()){
             i++; /// A row child ordered after this's row child so get next this' child
             if (i >= nrChildRow()) return; /// no more candidates, stop
           }
           if (!this->isLeaf() && i >= nrChildRow()) return;/// if a leaf, we continue
-          while (rowChild(i)->data.offset() >= a->rowChild(ia)->data.offset() + a->rowChild(ia)->data.size()){
+          while (rowChild(i)->data.offset() >= (transA=='N' ? a->rowChild(ia) : a->colChild(ia))->data.offset() + (transA=='N' ? a->rowChild(ia) : a->colChild(ia))->data.size()){
             ia++; /// this' row child ordered after A row child so get next A's child
-            if (ia >= a->nrChildRow()) return; /// no more candidates, stop
+            if (ia >= (transA=='N' ? a->nrChildRow() : a->nrChildCol())) return; /// no more candidates, stop
           }
-          if (!a->isLeaf() && ia >= a->nrChildRow()) return;/// if a leaf, we continue
+          if (!a->isLeaf() && ia >= (transA=='N' ? a->nrChildRow() : a->nrChildCol())) return;/// if a leaf, we continue
 
           /* second nested loop, on cols */
           int j = 0, jb = 0;
           while (j < std::max(1, nrChildCol()) && jb < std::max(1, (transB=='N' ? b->nrChildCol() : b->nrChildRow()))) {
-            while (b->colChild(jb)->data.offset() >= colChild(j)->data.offset() + colChild(j)->data.size()){
+            while ((transB=='N' ? b->colChild(jb) : b->rowChild(jb))->data.offset() >= colChild(j)->data.offset() + colChild(j)->data.size()){
               j++;/// B col child ordered after this' col child so get next this' child
               if (j >= nrChildCol()) break;
             }
             if (!this->isLeaf() && j >= nrChildCol()) break;
-            while (colChild(j)->data.offset() >= b->colChild(jb)->data.offset() + b->colChild(jb)->data.size()){
+            while (colChild(j)->data.offset() >= (transB=='N' ? b->colChild(jb) : b->rowChild(jb))->data.offset() + (transB=='N' ? b->colChild(jb) : b->rowChild(jb))->data.size()){
               jb++;/// this's col child ordered after B col child so get next B's child
-              if (jb >= b->nrChildCol()) break;
+              if (jb >=(transB=='N' ? b->nrChildCol() : b->nrChildRow())) break;
             }
-            if (!b->isLeaf() && jb >= b->nrChildCol()) break;
+            if (!b->isLeaf() && jb >=(transB=='N' ? b->nrChildCol() : b->nrChildRow())) break;
 
             /* If no child, use 'this' */
             HMatrix<T>* child = this->isLeaf() ? this : get(i, j);
@@ -1273,15 +1273,15 @@ HMatrix<T>::recursiveGemm(char transA, char transB, T alpha, const HMatrix<T>* a
               childB = b->isLeaf() ? b : b->getChildForGEMM(tB, k, jb);
 
               if (childA && childB)
-                if (childA->rows()->intersects(*child->rows()) && childB->cols()->intersects(*child->cols())){
+                if ((transA=='N' ? childA->rows() : childA->cols())->intersects(*child->rows()) && (transB=='N' ? childB->cols() : childB->rows())->intersects(*child->cols())){
                   /* rows and cols are compatible  */
                   child->gemm(tA, tB, alpha, childA, childB, Constants<T>::pone);
                 }
               }
               /* Iterate over whichever is ordered before, or both at once if aligned */
-              if (b->colChild(jb)->data.offset() + b->colChild(jb)->data.size() > colChild(j)->data.offset() + colChild(j)->data.size()){
+              if ((transB=='N' ? b->colChild(jb) : b->rowChild(jb))->data.offset() + (transB=='N' ? b->colChild(jb) : b->rowChild(jb))->data.size() > colChild(j)->data.offset() + colChild(j)->data.size()){
                 j++;/// someone may still be compatible with jb -> jb not incremented
-              } else if (b->colChild(jb)->data.offset() + b->colChild(jb)->data.size() < colChild(j)->data.offset() + colChild(j)->data.size()){
+              } else if ((transB=='N' ? b->colChild(jb) : b->rowChild(jb))->data.offset() + (transB=='N' ? b->colChild(jb) : b->rowChild(jb))->data.size() < colChild(j)->data.offset() + colChild(j)->data.size()){
                 jb++;/// someone may still be compatible with j -> j not incremented
               } else {
                 j++;
@@ -1289,9 +1289,9 @@ HMatrix<T>::recursiveGemm(char transA, char transB, T alpha, const HMatrix<T>* a
               }
           }
           /* Same as for cols, iterate over the cluster first ordered */
-          if (a->rowChild(ia)->data.offset() + a->rowChild(ia)->data.size() > rowChild(i)->data.offset() + rowChild(i)->data.size()){
+          if ((transA=='N' ? a->rowChild(ia) : a->colChild(ia))->data.offset() + (transA=='N' ? a->rowChild(ia) : a->colChild(ia))->data.size() > rowChild(i)->data.offset() + rowChild(i)->data.size()){
             i++;
-          } else if (a->rowChild(ia)->data.offset() + a->rowChild(ia)->data.size() < rowChild(i)->data.offset() + rowChild(i)->data.size()){
+          } else if ((transA=='N' ? a->rowChild(ia) : a->colChild(ia))->data.offset() + (transA=='N' ? a->rowChild(ia) : a->colChild(ia))->data.size() < rowChild(i)->data.offset() + rowChild(i)->data.size()){
             ia++;
           } else {
             i++;
