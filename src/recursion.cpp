@@ -156,7 +156,7 @@ namespace hmat {
           if (!m->get(i,0))
             continue;
           for (int j=0 ; j<i ; j++)
-            if (m->get(j,0))
+            if (me()->get(i,j) && m->get(j,0))
               me()->get(i,j)->mdntProduct(m->get(i,0), d, m->get(j,0)); // hij -= Mi0.D.tMj0
           me()->get(i,i)->mdmtProduct(m->get(i,0),  d);               // hii -= Mi0.D.tMi0
         }
@@ -169,8 +169,9 @@ namespace hmat {
               continue;
             const Mat* d_k = d->get(k,k);
             for (int j=0 ; j<i ; j++)
-              if (m->get(j,k))
+              if (me()->get(i,j) && m->get(j,k))
                 me()->get(i,j)->mdntProduct(m_ik, d_k, m->get(j,k)); // hij -= Mik.Dk.tMjk
+            if (me()->get(i, i))
             me()->get(i,i)->mdmtProduct(m_ik, d_k); //  hii -= Mik.Dk.tMik
           }
       }
