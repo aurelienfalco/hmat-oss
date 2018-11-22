@@ -235,7 +235,7 @@ void PostscriptDumper<T>::drawMatrix(const void *tree, ofstream& f, int depth, b
              << 0 << " " << lengthY << " "
              << lengthX << " " << 0 << " "
              << startX << " " << startY;
-             f << " .9 .9 .9"
+             f << " .7 .8 .7"
              << " greenrectangle" << endl;
           //  f << startX << " " << startY + (lengthY * .95) << " " << .7 * std::min(lengthX, - lengthY)
           //    << " (" << 0 << ") showrank" << endl;
