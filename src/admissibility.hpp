@@ -94,7 +94,11 @@ public:
    */
   virtual std::pair<bool, bool> splitRowsCols(const ClusterTree& rows, const ClusterTree& cols) const;
 
-  /*! \brief Split rows according to symbolic information from cols
+  /*! \brief Split rows according based on the information from cols.
+    By default, the function returns an empty vector.
+    If the function is overloaded to return a vector, the elements from this vector
+    will be inserted as children of rows.
+    See the hmatrix constructor for more details on how it is used.
     \return a vector of splitted rows
    */
   virtual std::vector<ClusterTree*> subDivideRows(const ClusterTree& rows, const ClusterTree& cols);

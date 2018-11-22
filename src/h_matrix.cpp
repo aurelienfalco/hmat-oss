@@ -133,6 +133,16 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
       approximateRank_ = admissibilityCondition->getApproximateRank(*(rows_), *(cols_));
     }
     else {
+
+      /* We want to subdivide rows in L following the list of scalar interactions
+        of the columns. This means that if a column cluster [0,100] has the
+        list of interactions {[500,10],[600,1],[610,5],[690,50]}, and the
+        current row cluster is [600,100], we will insert the children
+        [600,1],[610,5],[690,10] under the row cluster.
+        These are the intersections of clusters of the list of interactions of the
+        column cluster with the row cluster (note the size of last cluster has been reduced from 50 to 10).
+        The same principle is applied to columns in U using the interactions of the rows.
+      */
       std::vector<ClusterTree*> subSets;
       bool subdivide = true;
       if (subdivide) {
