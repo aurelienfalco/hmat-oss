@@ -40,7 +40,7 @@ StandardAdmissibilityCondition::StandardAdmissibilityCondition(double eta, doubl
 
 std::vector<ClusterTree*>
 AdmissibilityCondition::subDivideRows(const ClusterTree& rows, const ClusterTree& cols) {
-  return {};
+  return std::vector<ClusterTree*>();
 }
 
 std::pair<bool, bool>

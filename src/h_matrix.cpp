@@ -527,7 +527,7 @@ template<typename T> void HMatrix<T>::info(hmat_info_t & result) {
               size_t fit = full()->info(result, rowsMin, colsMin, rowsMax, colsMax);
               result.full_fit_nnz += fit;
               result.full_square_fit_nnz += (colsMax+1 - colsMin) * (rowsMax+1 - rowsMin);
-              RkMatrix<T>* rk = truncatedSvd(full()->copy());
+              RkMatrix<T>* rk = truncatedSvd(full()->copy(), RkMatrix<T>::approx.recompressionEpsilon);
               result.full_as_rk_size += rk->compressedSize();
               HMatrix<T> * tmpMatrix = new HMatrix<T>(this->localSettings.global);
               tmpMatrix->temporary_=true;
