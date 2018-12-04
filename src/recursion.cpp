@@ -363,11 +363,13 @@ namespace hmat {
       me()->get(k,k)->lltDecomposition(progress);
       // Solve the rest of column k: solve Lik tLkk = Hik and get Lik
       for (int i=k+1 ; i<me()->nrChildRow() ; i++)
+      if (me()->get(k, k) && me()->get(i,k))
         me()->get(k,k)->solveUpperTriangularRight(me()->get(i,k), false, true);
       // update the rest of the matrix [k+1, .., n]x[k+1, .., n] (below diag)
       for (int i=k+1 ; i<me()->nrChildRow() ; i++)
         for (int j=k+1 ; j<=i ; j++)
           // Hij <- Hij - Lik tLjk
+          if (me()->get(i, j) && me()->get(i,k) && me()->get(j,k))
           me()->get(i,j)->gemm('N', 'T', Constants<T>::mone, me()->get(i,k), me()->get(j,k), Constants<T>::pone);
     }
   }
