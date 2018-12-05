@@ -855,6 +855,33 @@ template<typename T> bool listAllRk(const HMatrix<T> * m, vector<const RkMatrix<
 }
 
 /**
+ * @brief Get all children of matrix m and transform them as FullMatrices.
+ * @return true if the matrix contains only full matrices inferior to maxFullSize,
+ * false if one matrix is larger than this threshold
+ */
+template<typename T> bool listAllAsFull(const HMatrix<T> * m, vector<const FullMatrix<T>*> & result) {
+  size_t maxFullSize = 50000000;
+    if(m == NULL) {
+        // do nothing
+    } else if(m->isFullMatrix())
+        result.push_back(m->full());
+    else if(m->isRkMatrix()) {
+      if (m->isVoid()) return true;
+      else if (m->rows()->size() * m->cols()->size() * sizeof(T) > maxFullSize) return false;
+      else {
+        FullMatrix<T>* fullMat = m->rk()->eval();
+        result.push_back(fullMat);
+      }
+    } else {
+        for(int i = 0; i < m->nrChild(); i++) {
+            if(m->getChild(i) && !listAllAsFull(m->getChild(i), result))
+                return false;
+        }
+    }
+    return true;
+}
+
+/**
  * @brief generic AXPY implementation that dispatch to others or recurse
  */
 template<typename T>
@@ -876,7 +903,14 @@ void HMatrix<T>::axpy(T alpha, const HMatrix<T>* x) {
                         rk()->formattedAddParts(&alphas[0], &rkLeaves[0],
                             rkLeaves.size(), RkMatrix<T>::approx.recompressionEpsilon);
                     } else {
-                        // x has contains both full and Rk matrices, this is not
+                        vector<const FullMatrix<T>*> fullLeaves;
+                        if (listAllAsFull(x, fullLeaves)){
+                          vector<T> alphas(fullLeaves.size(), alpha);
+                          rk()->formattedAddParts(&alphas[0], &fullLeaves[0],
+                              fullLeaves.size());
+                        } else
+                        // x contains both full and Rk matrices, and can't
+                        // decompress (too large) Rk matrices, this is not
                         // supported yet.
                         HMAT_ASSERT(false);
                     }
