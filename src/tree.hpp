@@ -141,11 +141,11 @@ public:
   /*! \brief Return the child of index, or NULL.
    */
   inline TreeNode *getChild(int index) const {
-    assert(index>=0 && index<nrChild());
+    // assert(index>=0 && index<nrChild());
     return children[index];
   }
   inline TreeNode *&getChild(int index)  {
-    assert(index>=0 && index<nrChild());
+    // assert(index>=0 && index<nrChild());
     return children[index];
   }
 
