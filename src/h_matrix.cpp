@@ -107,7 +107,7 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
     rows_(_rows), cols_(_cols), rk_(NULL),
     rank_(UNINITIALIZED_BLOCK), approximateRank_(UNINITIALIZED_BLOCK),
     isUpper(false), isLower(false),
-    isTriUpper(false), isTriLower(false), keepSameRows(true), keepSameCols(true), dividedLeaves(false), temporary_(false),
+    isTriUpper(false), isTriLower(false), keepSameRows(false), keepSameCols(false), dividedLeaves(false), temporary_(false),
     ownRowsClusterTree_(false), ownColsClusterTree_(false), localSettings(settings)
 {
   if (isVoid())
@@ -152,7 +152,7 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
         subSets = admissibilityCondition->subDivideRows(*rows_, *cols_);
 
         if (rows_->data.offset() < cols_->data.offset()) {
-          keepSameCols = false;
+          keepSameRows = true;
           ClusterTree* colsCopy = cols_->slice(cols_->data.offset(), cols_->data.size());
           for (int i = 0; i < subSets.size(); ++i) {
             colsCopy->insertChild(i, subSets[i]);
@@ -160,11 +160,11 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
           cols_ = colsCopy;
           for (int i = 0; i < subSets.size(); ++i) {
             if (rows_->isLeaf()){
+              keepSameRows = true;
               this->insertChild(0, i, new HMatrix<T>(const_cast<ClusterTree*>(rows_), const_cast<ClusterTree*>(subSets[i]), settings, _depth+1, kNotSymmetric, admissibilityCondition));
               this->get(0,i)->dividedLeaves = true;
             }
             else {
-              keepSameRows = false;
               for (int j = 0; j < nrChildRow(); ++j) {
                 this->insertChild(j, i, new HMatrix<T>(const_cast<ClusterTree*>(rows_->getChild(j)), const_cast<ClusterTree*>(subSets[i]), settings, _depth+1, kNotSymmetric, admissibilityCondition));
                 this->get(j,i)->dividedLeaves = true;
@@ -173,7 +173,7 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
           }
         }
         else{
-          keepSameRows = false;
+          keepSameCols = true;
           ClusterTree* rowsCopy = rows_->slice(rows_->data.offset(), rows_->data.size());
           for (int i = 0; i < subSets.size(); ++i) {
             rowsCopy->insertChild(i, subSets[i]);
@@ -181,11 +181,11 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
           rows_ = rowsCopy;
           for (int i = 0; i < subSets.size(); ++i) {
             if (cols_->isLeaf()){
+              keepSameCols = true;
               this->insertChild(i, 0, new HMatrix<T>(const_cast<ClusterTree*>(subSets[i]), const_cast<ClusterTree*>(cols_), settings, _depth+1, kNotSymmetric, admissibilityCondition));
               this->get(i,0)->dividedLeaves = true;
             }
             else {
-              keepSameCols = false;
               for (int j = 0; j < nrChildCol(); ++j) {
                 this->insertChild(i, j, new HMatrix<T>(const_cast<ClusterTree*>(subSets[i]), const_cast<ClusterTree*>(cols_->getChild(j)), settings, _depth+1, kNotSymmetric, admissibilityCondition));
                 this->get(i,j)->dividedLeaves = true;
@@ -222,6 +222,7 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
         }
       }
     }
+    assert(this->nrChildRow() * this->nrChildCol() == this->nrChild());
   }
   admissibilityCondition->clean(*(rows_));
   admissibilityCondition->clean(*(cols_));
