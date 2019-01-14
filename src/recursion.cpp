@@ -395,10 +395,12 @@ namespace hmat {
       for (int k=0 ; k<b->nrChildCol() ; k++) { // Loop on the column of the RHS
         for (int i=me()->nrChildRow()-1 ; i>=0 ; i--) {
           // Solve the i-th diagonal system
+          if (me()->get(i, i) && b->get(i,k))
           me()->get(i, i)->solveUpperTriangularLeft(b->get(i,k), unitriangular, lowerStored, mainOp);
           // Update b[j,k] j<i with the contribution of the solutions just computed b[i,k]
           for (int j=0 ; j<i ; j++) {
             const Mat* u_ji = (lowerStored ? me()->get(i, j) : me()->get(j, i));
+            if (b->get(j,k) && u_ji && b->get(i,k))
             b->get(j,k)->gemm(lowerStored ? 'T' : 'N', 'N', Constants<T>::mone, u_ji, b->get(i,k),
                               Constants<T>::pone, mainOp);
           }
