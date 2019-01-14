@@ -29,10 +29,10 @@
 using namespace std;
 using namespace hmat;
 
-static double writeHeader(ofstream & file, int maxDim)
+static double writeHeader(ofstream & file, int sizeX, int sizeY)
 {
     file << "%!PS-Adobe-" << endl;
-    file << "%%BoundingBox: " << 0 << " " << 0 << " " << 615 << " " << 615 << endl;
+    file << "%%BoundingBox: " << 0 << " " << 0 << " " << 615 << " " << 615 * sizeX / sizeY << endl;
     file << "%!" << endl << "% Fichier postscript representant une matrice"
          << endl;
     file << "/redrectangle {" << endl
@@ -115,9 +115,9 @@ static double writeHeader(ofstream & file, int maxDim)
          << " data show" << endl
          << "} def" << endl
          << " " << endl;
-    double scale = (612. / maxDim) * 0.95;
+    double scale = (612. / sizeY) * 0.95;
     file << scale << " " << scale << " scale" << endl;
-    file << maxDim / 40. << " " << maxDim / 40. << " translate" << endl;
+    file << sizeX / 40. << " " << sizeY / 40. << " translate" << endl;
     return scale;
 }
 
@@ -143,7 +143,7 @@ void PostscriptDumper<T>::write(const void * tree, const std::string& filename) 
     ofstream file;
     file.open(filename.c_str());
     const HMatrix<T> * m = castToHMatrix(tree);
-    writeHeader(file, max(m->rows()->size(), m->cols()->size()));
+    writeHeader(file, m->rows()->size(), m->cols()->size());
     recursiveDrawing(tree, file, 0);
     file << "showpage" << endl;
 }
